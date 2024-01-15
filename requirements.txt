@@ -3,3 +3,8 @@ numpy
 pandas
 pydeck
 streamlit
+streamlit -q
+streamlit-aggrid
+streamlit-option-menu
+plotly-express
+plotly
