@@ -11,7 +11,7 @@ import time
 
 def init_session_state():
     st.session_state.page_number = 1
-    st.session_state.initial_data = pd.read_csv('initial_dataset.csv', dtype={'Year': str})[['Year','Month','Profit Actual']]
+    st.session_state.initial_data = pd.read_csv('initial_dataset.csv', dtype={'Year': str})[['Year','Month','ProfitActual']]
     forecast_data = pd.read_csv('forecasted_output_prophet.csv')[['Date','Profit']]
     forecast_data['Month'] = pd.to_datetime(forecast_data['Date']).dt.month_name()
     forecast_data['Year'] = pd.to_datetime(forecast_data['Date']).dt.year
@@ -137,7 +137,7 @@ def change_profit(df):
 def forecast_prediction():
     forecast_data = st.session_state.forecast_data
     initial_data = st.session_state.initial_data
-    initial_data = initial_data.rename(columns = {'Profit Actual':'Profit'})
+    initial_data = initial_data.rename(columns = {'ProfitActual':'Profit'})
     initial_data['IsInitial'] = True
     forecast_data['IsInitial'] = False
     overall_data  = pd.concat([initial_data[['Month', 'Year', 'Profit', 'IsInitial']], forecast_data[['Month', 'Year', 'Profit', 'IsInitial']]])
@@ -239,7 +239,7 @@ def app_screens():
         with col2:
             # st.title("Outcome")
             x1 = data['Month']
-            # y1 = data['Profit Actual']
+            # y1 = data['ProfitActual']
             y2 = data['DesiredProfit']
             fig = px.line(data, x=x1, y=[y2])
             st.plotly_chart(fig, theme="streamlit")
