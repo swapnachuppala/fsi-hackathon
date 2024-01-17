@@ -19,8 +19,7 @@ def init_session_state():
     st.session_state.initial_data['Year_Month'] = st.session_state.initial_data['Year'].astype(str) + ' ' + st.session_state.initial_data['Month'].str.slice(0, 3)
     st.session_state.suggestion_data = pd.read_csv('suggestion_data.csv', dtype={'Year': str})
     st.session_state.final_outcome = {}
-    st.session_state.final_outcome['Year'] = st.session_state.forecast_data['Year'].astype("str")
-    st.session_state.final_outcome['Month'] = st.session_state.forecast_data['Month']
+    st.session_state.final_outcome['Year_Month'] = st.session_state.forecast_data['Year_Month']
     st.session_state.final_outcome['Predicted Outcome (AI)'] = st.session_state.forecast_data['Forecasted Profit (AI)']
         
 # Create an instance of the app state
@@ -36,7 +35,6 @@ def typewriter(text: str, speed: int):
         time.sleep(1 / speed)
     
 def home_page():
-    # st.title("Home")
     text_size = """
     <style>
     [data-testid = "stMarkdownContainer"] {
@@ -53,10 +51,10 @@ def home_page():
     
     st.markdown(text_size,unsafe_allow_html=True)
     
-    text = "Hello world !!"
+    text = "Hello World !!"
     speed = 10
     typewriter(text=text, speed=speed)
-    text = "Welcome to see the future."
+    text = "Welcome to see the Future."
     typewriter(text=text, speed=speed)
     col1,col2,col3 = st.columns(spec=[10,8,10],gap="large")
     with col3:
@@ -184,7 +182,7 @@ def forecast_prediction():
             plot_bgcolor='#FFFFFF')
             
         #fig.show()
-        st.plotly_chart(fig)
+        st.plotly_chart(fig,use_container_width=True)
 
 def input_prediction():
     # st.session_state.forecast_data = st.session_state.forecast_data.rename(columns = {'Forecasted Profit (AI)':'AI suggested profits'})
@@ -260,14 +258,14 @@ def edit_suggestions():
     st.session_state.final_outcome['Target Profit (AI + Manual)'] = Target_profit
 
 
-    with st.container(border=True):
-        header_html = """
-                <div style="text-align: center;">
-                    <h1 style= "color: beige;">Rules</h1>
-                </div>
-            """
-        st.markdown(header_html, unsafe_allow_html=True)
-        st.write("HELLO")
+    # with st.container(border=True):
+    #     header_html = """
+    #             <div style="text-align: center;">
+    #                 <h1 style= "color: beige;">Rules</h1>
+    #             </div>
+    #         """
+    #     st.markdown(header_html, unsafe_allow_html=True)
+    #     st.write("HELLO")
     
 def final_outcome():
     
@@ -277,29 +275,35 @@ def final_outcome():
             </div>
         """
     st.markdown(header_html, unsafe_allow_html=True)
-    data = pd.DataFrame(st.session_state.final_outcome)
-    st.data_editor(data,column_config= {"Year":{"alignment": "left"},"Month": {"alignment": "left"},"Predicted Outcome (AI)":{"alignment": "left"},"Desired outcome(Manual)":{"alignment": "left"},"Target Profit (AI + Manual)":{"alignment": "left"}},disabled= True,use_container_width=True, height=455,hide_index=True)
+    st.session_state.final_outcome = pd.DataFrame(st.session_state.final_outcome)
+    st.data_editor(st.session_state.final_outcome,column_config= {"Year":{"alignment": "left"},"Month": {"alignment": "left"},"Predicted Outcome (AI)":{"alignment": "left"},"Desired outcome(Manual)":{"alignment": "left"},"Target Profit (AI + Manual)":{"alignment": "left"}},disabled= True,use_container_width=True, height=455,hide_index=True)
 
     header_html = """
-        <div style="text-align: center;">
+        <div style="text-align: left;">
             <h1 style= "color: beige;">Comparison</h1>
         </div>
     """
     st.markdown(header_html, unsafe_allow_html=True)
-    x1 = data['Month']
-    y1 = data['Predicted Outcome (AI)']
-    y2 = data['Desired outcome(Manual)']
-    y3 = data['Target Profit (AI + Manual)']
-    fig = px.line(data, x=x1, y=[y1,y2,y3])
+    
+    data = pd.concat([st.session_state.initial_data[['Year_Month','Profit']],st.session_state.final_outcome[['Year_Month','Predicted Outcome (AI)','Desired outcome(Manual)','Target Profit (AI + Manual)']]])        
+    # fig = px.bar(data, x='Year_Month', y=['Profit','Forecasted Profit (AI)'])
+    
+    x1 = data['Year_Month']
+    y1 = data['Profit']
+    y2 = data['Predicted Outcome (AI)']
+    y3 = data['Desired outcome(Manual)']
+    y4 = data['Target Profit (AI + Manual)']
+    fig = px.line(data, x=x1, y=[y1,y2,y3,y4])
     fig.update_layout(
+            height=600,
             legend_title_text="Profits",
-            xaxis_title = 'Months',
+            xaxis_title = 'Year_Months',
             yaxis_title = 'Profit',
-            title = 'Predictions for the Year 2024',
+            title = 'Prediction Trend',
             paper_bgcolor='#FFFFFF',
             plot_bgcolor='#FFFFFF')
     
-    st.plotly_chart(fig,use_container_width=True)
+    st.plotly_chart(fig,height=600,use_container_width=True)
     
 def app_screens():
     
@@ -354,7 +358,7 @@ def main():
     st.markdown(page_bg_img,unsafe_allow_html=True)
     header_html = """
     <div style="text-align: center;">
-        <h1 style= "color: white;">NBA Synthesizer & Forecast modifier </h1>
+        <h1 style= "color: white;">NBA Synthesizer & Forecast Modifier </h1>
     </div>
 """
     st.markdown(header_html, unsafe_allow_html=True)
