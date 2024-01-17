@@ -211,7 +211,7 @@ def suggestions():
     selected_data = dataframe_with_selections(st.session_state.suggestion_data).reset_index(drop=True)
     st.session_state.selected_data = selected_data.reset_index(drop=True)
     
-    st.write(st.session_state.selected_data,use_container_width=True,
+    st.data_editor(st.session_state.selected_data,use_container_width=True,
                    column_config={"Suggestion" : {"alignment": "left"},
                        "PremiumsCollected":{"alignment": "left"},
                        "OverheadCharges":{"alignment": "left"},
@@ -291,6 +291,14 @@ def final_outcome():
     y2 = data['Desired outcome(Manual)']
     y3 = data['Target Profit (AI + Manual)']
     fig = px.line(data, x=x1, y=[y1,y2,y3])
+    fig.update_layout(
+            legend_title_text="Profits",
+            xaxis_title = 'Months',
+            yaxis_title = 'Profit',
+            title = 'Predictions for the Year 2024',
+            paper_bgcolor='#FFFFFF',
+            plot_bgcolor='#FFFFFF')
+    
     st.plotly_chart(fig,use_container_width=True)
     
 def app_screens():
