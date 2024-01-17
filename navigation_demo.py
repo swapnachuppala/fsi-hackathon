@@ -11,13 +11,17 @@ import time
 
 def init_session_state():
     st.session_state.page_number = 1
-    st.session_state.initial_data = pd.read_csv('initial_dataset.csv', dtype={'Year': str})[['Year','Month','ProfitActual']]
-    forecast_data = pd.read_csv('forecasted_output_prophet.csv')[['Date','Profit']]
-    forecast_data['Month'] = pd.to_datetime(forecast_data['Date']).dt.month_name()
-    forecast_data['Year'] = pd.to_datetime(forecast_data['Date']).dt.year
-    forecast_data['Year_Month'] =  forecast_data['Year'].astype(str) + ' ' + forecast_data['Month'].str.slice(0, 3) 
-    st.session_state.forecast_data = forecast_data
+    st.session_state.initial_data = pd.read_csv('initial_dataset.csv',dtype={'Year': str})[['Year','Month','ProfitActual']].rename(columns = {'ProfitActual':'Profit'})
+    st.session_state.forecast_data = pd.read_csv('forecasted_output_prophet.csv')[['Date','Profit']].rename(columns={'Profit': 'Forecasted Profit (AI)'})
+    st.session_state.forecast_data['Year'] = pd.to_datetime(st.session_state.forecast_data['Date']).dt.year
+    st.session_state.forecast_data['Month'] = pd.to_datetime(st.session_state.forecast_data['Date']).dt.month_name()
+    st.session_state.forecast_data['Year_Month'] =  st.session_state.forecast_data['Year'].astype(str) + ' ' + st.session_state.forecast_data['Month'].str.slice(0, 3) 
+    st.session_state.initial_data['Year_Month'] = st.session_state.initial_data['Year'].astype(str) + ' ' + st.session_state.initial_data['Month'].str.slice(0, 3)
     st.session_state.suggestion_data = pd.read_csv('suggestion_data.csv', dtype={'Year': str})
+    st.session_state.final_outcome = {}
+    st.session_state.final_outcome['Year'] = st.session_state.forecast_data['Year'].astype("str")
+    st.session_state.final_outcome['Month'] = st.session_state.forecast_data['Month']
+    st.session_state.final_outcome['Predicted Outcome (AI)'] = st.session_state.forecast_data['Forecasted Profit (AI)']
         
 # Create an instance of the app state
 if "page_number" not in st.session_state:
@@ -73,9 +77,10 @@ def connection_details():
     center = """
     <style>
     
-    # [data-testid = "stMarkdownContainer"] {
-    #     text-align: center;    
+    # [data-testid = "stMarkdownContainer"]{
+    #     color: white;    
     # }
+
     .st-emotion-cache-16idsys p{
     font-size: large;
     font-weight: bold;
@@ -86,27 +91,39 @@ def connection_details():
     st.markdown(center,unsafe_allow_html=True)
     col1, col2,col3 = st.columns(spec=[5,7,5],gap="small")
     with col2:
-    
-        selected_option = st.selectbox("Select the Project", [" ","q-gcp-00863-fsihackathon-23-12"])
-        selected_option = st.selectbox("Select the Dataset", [" ","ba_synthesizer_forecast_modifier"])
-        selected_option = st.selectbox("Select the Table", [" ","forecasted_output_firstpass"])
-        
-        header_html = """
-        <div style="text-align: center;">
-            <h1 style= "color: beige;">Expected Outcome Information</h1>
-        </div>
-        """
-        st.markdown(header_html, unsafe_allow_html=True)
-        selected_option = st.selectbox("Select the 'Prediction' column from the dataset to analyze", ["","Profit","Sales","Rention","R&D Expenses","Administration expense"])
-        selected_option = st.selectbox("Select the 'Year' to Predict", ["","2024","2025","2026","2027","2028"])
-
-        st.write("")
-        col1,col2,col3 = st.columns(spec=[5,7,3.5],gap="small")
-        with col3:
-            if st.button("Show Predictions"):
-                st.session_state.page_number = 3
-                st.rerun()
-                
+        selected_option = st.selectbox("Select the Project", [""] +["q-gcp-00863-fsihackathon-23-12"])
+        if selected_option:
+            selected_option = st.selectbox("Select the Dataset", [""] +["ba_synthesizer_forecast_modifier"])
+            if selected_option:
+                selected_option = st.selectbox("Select the Table", [""] +["forecasted_output_firstpass"])
+                if selected_option:        
+                    header_html = """
+                    <div style="text-align: center;">
+                        <h1 style= "color: beige;">Expected Outcome Information</h1>
+                    </div>
+                    """
+                    st.markdown(header_html, unsafe_allow_html=True)
+                    selected_option = st.selectbox("Select the 'Prediction' column from the dataset to analyze", [""] +["Profit","Sales","Rention","R&D Expenses","Administration expense"])
+                    if selected_option:
+                        selected_option = st.selectbox("Select the 'Year' to Predict", [""] +["2024","2025","2026","2027","2028"])
+                        st.write("")
+                        if selected_option:
+                            col1,col2,col3 = st.columns(spec=[5,7,3.5],gap="small")
+                            with col3:
+                                if st.button("Show Predictions"):
+                                    st.session_state.page_number = 3
+                                    st.rerun()
+                        else:
+                            st.write("Select Any option")
+                    else:
+                        st.write("Select Any option")
+                else:
+                    st.write("Select Any option")
+            else:
+                st.write("Select Any option")
+        else:
+            st.write("Select Any option")
+               
 def dataframe_with_selections(df):
     
     df_with_selections = df.copy()
@@ -116,13 +133,22 @@ def dataframe_with_selections(df):
     edited_df = st.data_editor(
         df_with_selections,
         hide_index=True,
-        column_config={"Select": st.column_config.CheckboxColumn(required=True)},
+        column_config={"Select": st.column_config.CheckboxColumn(required=True),
+                       "Suggestion":{"alignment": "left"},
+                       "PremiumsCollected":{"alignment": "left"},
+                       "OverheadCharges":{"alignment": "left"},
+                       "HeadCount":{"alignment": "left"},
+                       "MarketingExpense":{"alignment": "left"},
+                       "R&DExpense":{"alignment": "left"},
+                       "AdminstrationExpenses":{"alignment": "left"},
+                       "DesiredProfit":{"alignment": "left"}},
+        use_container_width=True,
         disabled=df.columns,
     )
 
     # Filter the dataframe using the temporary column, then drop the column
     selected_rows = edited_df[edited_df.Select]
-    return selected_rows.drop('Select', axis=1)
+    return selected_rows.drop('Select', axis=1).reset_index(drop=True)
             
 # Function to change the profit in suggestion Screen 
 def change_profit(df):
@@ -130,29 +156,29 @@ def change_profit(df):
     for index, updates in state["edited_rows"].items():
         for key, value in updates.items():
             st.session_state["selected_data"].loc[st.session_state["selected_data"].index == index, key] = value
-        sum_values = st.session_state.selected_data.loc[index, ['OverheadCharges', 'HeadCount', 'MarketingExpense', 'AdminstrationExpenses']].sum()
-        st.session_state.selected_data.loc[st.session_state["selected_data"].index == index, "Profit Forecast/Prediction"] = sum_values
-        #Premiums collected	Overhead charges( operation Expense ) (unavoidable expense)   0.7- 1.3	Head count (Salaries) 0.4 - 0.9	Marketing Expense 0.3-0.8	R&D Expense 0.5 - 1	Adminstration Expenses  0.5 -0.9    
+        Profit =  st.session_state.selected_data.at[index, 'PremiumsCollected'] - st.session_state.selected_data.loc[index, ['OverheadCharges','HeadCount','MarketingExpense','R&DExpense','AdminstrationExpenses']].sum()
+        st.session_state.selected_data.loc[st.session_state["selected_data"].index == index, "DesiredProfit"] = Profit
 
 def forecast_prediction():
-    forecast_data = st.session_state.forecast_data
-    initial_data = st.session_state.initial_data
-    initial_data = initial_data.rename(columns = {'ProfitActual':'Profit'})
-    initial_data['IsInitial'] = True
-    forecast_data['IsInitial'] = False
-    overall_data  = pd.concat([initial_data[['Month', 'Year', 'Profit', 'IsInitial']], forecast_data[['Month', 'Year', 'Profit', 'IsInitial']]])
-    
-    overall_data['Year_Month'] =  overall_data['Year'].astype(str) + ' ' + overall_data['Month'].str.slice(0, 3) 
     col1, col2 = st.columns([2,2])
     with col1:
-        st.table(forecast_data[['Year_Month', 'Profit']].rename(columns = {'Profit': 'Forecasted Profits'}))
+        st.data_editor(st.session_state.forecast_data[['Year_Month', 'Forecasted Profit (AI)']],
+                       column_config={"Year_Month": {"alignment": "left"},"Forecasted Profit (AI)":{"alignment": "left"}},
+                       disabled=True,
+                       use_container_width=True,
+                       height=450,
+                       hide_index= True)
         
+
     with col2:
-        x1 = overall_data['Year_Month']
-        y1 = overall_data.apply(lambda x:0 if x['IsInitial'] == True else x['Profit'], axis=1)#overall_data[overall_data['IsInitial'] == True]['Profit']
-        y2 = overall_data.apply(lambda x:0 if x['IsInitial'] == False else x['Profit'], axis=1) #overall_data[overall_data['IsInitial'] == False]['Profit']
-        fig = px.bar(overall_data, x=x1, y=[y1,y2], labels={'column1':'Actual profit', 'column2': 'Forecasted profit'})
+
+        data = pd.concat([st.session_state.initial_data[['Year_Month','Profit']],st.session_state.forecast_data[['Year_Month','Forecasted Profit (AI)']]])        
+        fig = px.bar(data, x='Year_Month', y=['Profit','Forecasted Profit (AI)'])
+
         fig.update_layout(
+            legend_title_text="Profits",
+            xaxis_title = 'Year Trend',
+            yaxis_title = 'Profit',
             title = 'Predictions',
             paper_bgcolor='#FFFFFF',
             plot_bgcolor='#FFFFFF')
@@ -160,6 +186,113 @@ def forecast_prediction():
         #fig.show()
         st.plotly_chart(fig)
 
+def input_prediction():
+    # st.session_state.forecast_data = st.session_state.forecast_data.rename(columns = {'Forecasted Profit (AI)':'AI suggested profits'})
+    st.session_state.forecast_data['Desired Profits'] = st.session_state.forecast_data['Forecasted Profit (AI)']
+    
+    Desired_profit = st.data_editor(
+        st.session_state.forecast_data[['Year_Month','Forecasted Profit (AI)','Desired Profits']],
+        key='forecast_data_df',
+        disabled=["Year_Month",'Forecasted Profit (AI)'],
+        use_container_width=True, 
+        height=450,
+        hide_index= True,
+        column_config={
+            "Year_Month": {"alignment": "left"},
+            "Forecasted Profit (AI)": {"alignment": "left"},
+            "Desired Profits" : {"alignment": "left"}
+            }
+        )['Desired Profits']
+
+    st.session_state.final_outcome['Desired outcome(Manual)'] = Desired_profit 
+
+def suggestions():
+
+    selected_data = dataframe_with_selections(st.session_state.suggestion_data).reset_index(drop=True)
+    st.session_state.selected_data = selected_data.reset_index(drop=True)
+    
+    st.write(st.session_state.selected_data,use_container_width=True,
+                   column_config={"Suggestion" : {"alignment": "left"},
+                       "PremiumsCollected":{"alignment": "left"},
+                       "OverheadCharges":{"alignment": "left"},
+                       "HeadCount":{"alignment": "left"},
+                       "MarketingExpense":{"alignment": "left"},
+                       "R&DExpense":{"alignment": "left"},
+                       "AdminstrationExpenses":{"alignment": "left"},
+                       "DesiredProfit":{"alignment": "left"}},
+                   disabled=True,
+                   hide_index=True
+                   )
+    st.session_state.selected_data.reset_index(drop=True)
+    
+def edit_suggestions():
+    header_html = """
+            <div style="text-align: left;">
+                <h1 style= "color: beige;">Input Suggestions</h1>
+            </div>
+        """
+    st.markdown(header_html, unsafe_allow_html=True)
+    st.session_state.selected_data.reset_index(drop=True)
+    Target_profit = st.data_editor(
+        st.session_state.selected_data,
+        key='edited_df',
+        disabled=['Suggestion','Year','Month','DesiredProfit'],
+        use_container_width=True, 
+        height=450,
+        hide_index= True,
+        column_config={
+        "DesiredProfit": st.column_config.NumberColumn(
+        format="%dcr"),
+        "Suggestion" : {"alignment": "left"},
+        "Year": {"alignment": "left"},
+        "Month": {"alignment": "left"},
+        "DesiredProfit": {"alignment": "left"},
+        "PremiumsCollected": {"alignment": "left"},
+        "OverheadCharges": {"alignment": "left"},
+        "HeadCount": {"alignment": "left"},
+        "MarketingExpense": {"alignment": "left"},
+        "R&DExpense": {"alignment": "left"},
+        "AdminstrationExpenses":{"alignment": "left"}     
+        },
+        on_change= change_profit,
+        args=[st.session_state.selected_data]
+        )['DesiredProfit']
+    st.session_state.final_outcome['Target Profit (AI + Manual)'] = Target_profit
+
+
+    with st.container(border=True):
+        header_html = """
+                <div style="text-align: center;">
+                    <h1 style= "color: beige;">Rules</h1>
+                </div>
+            """
+        st.markdown(header_html, unsafe_allow_html=True)
+        st.write("HELLO")
+    
+def final_outcome():
+    
+    header_html = """
+            <div style="text-align: left;">
+                <h1 style= "color: beige;">Final Outcome</h1>
+            </div>
+        """
+    st.markdown(header_html, unsafe_allow_html=True)
+    data = pd.DataFrame(st.session_state.final_outcome)
+    st.data_editor(data,column_config= {"Year":{"alignment": "left"},"Month": {"alignment": "left"},"Predicted Outcome (AI)":{"alignment": "left"},"Desired outcome(Manual)":{"alignment": "left"},"Target Profit (AI + Manual)":{"alignment": "left"}},disabled= True,use_container_width=True, height=455,hide_index=True)
+
+    header_html = """
+        <div style="text-align: center;">
+            <h1 style= "color: beige;">Comparison</h1>
+        </div>
+    """
+    st.markdown(header_html, unsafe_allow_html=True)
+    x1 = data['Month']
+    y1 = data['Predicted Outcome (AI)']
+    y2 = data['Desired outcome(Manual)']
+    y3 = data['Target Profit (AI + Manual)']
+    fig = px.line(data, x=x1, y=[y1,y2,y3])
+    st.plotly_chart(fig,use_container_width=True)
+    
 def app_screens():
     
     if st.session_state.get('switch_button', False):
@@ -179,71 +312,16 @@ def app_screens():
         forecast_prediction()
             
     if selected4 == 'Input Prediction':
-        forecast_data_df = st.session_state.forecast_data[['Year_Month', 'Profit']]
-        forecast_data_df = forecast_data_df.rename(columns = {'Profit':'AI suggested profits'})
-        forecast_data_df['Desired Profits'] = forecast_data_df['AI suggested profits']
-        prediction_input = st.data_editor(
-            forecast_data_df,
-            key='forecast_data_df',
-            disabled=["Year_Month",'AI suggested profits'],
-            use_container_width=True, 
-            height=450,
-            hide_index= True,
-            column_config={
-            "WP": st.column_config.NumberColumn(
-            format="%dcr")},
-            args=[forecast_data_df]
-            )
-        st.session_state.prediction_input = prediction_input
-        
+        input_prediction()
 
     if selected4 == 'Suggestion':
-        # col1, col2 = st.columns([2,2])
+        suggestions()
         
-        # with col1:
-        selection_data = dataframe_with_selections(st.session_state.suggestion_data)
-        st.session_state.selected_data = selection_data
-            
-        # with col2:
-        #st.write("Your selection:")
-        st.write(selection_data)
-        
-    if selected4 == 'Edit Suggestion':
-        # col1, col2 = st.columns(spec=[0.7, 0.3],gap="small")
-        # with col1:
-        
-        st.title("Input Suggestions")
-        st.data_editor(
-            st.session_state.selected_data,
-            key='edited_df',
-            disabled=["Desired Profit"],
-            use_container_width=True, 
-            height=450,
-            hide_index= True,
-            column_config={
-            "WP": st.column_config.NumberColumn(
-            format="%dcr")},
-            on_change= change_profit,
-            args=[st.session_state.selected_data]
-            )
-        # with col2:
-        st.title("Rules")
-        st.write("HELLO")
+    if selected4 == 'Edit Suggestion':     
+        edit_suggestions()
     
     if selected4 == 'Final Outcome':
-        col1, col2 = st.columns(2)
-        data = st.session_state.selected_data
-        with col1:
-            st.title("Predictions")
-            st.data_editor(data,disabled= True,use_container_width=True, height=455,hide_index=True)
-        with col2:
-            # st.title("Outcome")
-            x1 = data['Month']
-            # y1 = data['ProfitActual']
-            y2 = data['DesiredProfit']
-            fig = px.line(data, x=x1, y=[y2])
-            st.plotly_chart(fig, theme="streamlit")
-            # st.line_chart(data=st.session_state.selected_data, x='Profit Forecast/Prediction',y='Month',use_container_width=True)
+        final_outcome()
 
 
 def main():
