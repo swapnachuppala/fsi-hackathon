@@ -12,6 +12,9 @@ import time
 def init_session_state():
     st.session_state.page_number = 1
     st.session_state.initial_data = pd.read_csv('initial_dataset.csv',dtype={'Year': str})[['Year','Month','ProfitActual']].rename(columns = {'ProfitActual':'Profit'})
+    st.session_state.initial_data['Year'] = pd.to_datetime(st.session_state.initial_data['Year'])
+    st.session_state.initial_data = st.session_state.initial_data[st.session_state.initial_data['Year'].dt.year >= 2021]
+    st.session_state.initial_data['Year'] =  pd.to_datetime(st.session_state.initial_data['Year']).dt.year
     st.session_state.forecast_data = pd.read_csv('forecasted_output_prophet.csv')[['Date','Profit']].rename(columns={'Profit': 'Forecasted Profit (AI)'})
     st.session_state.forecast_data['Year'] = pd.to_datetime(st.session_state.forecast_data['Date']).dt.year
     st.session_state.forecast_data['Month'] = pd.to_datetime(st.session_state.forecast_data['Date']).dt.month_name()
@@ -181,6 +184,7 @@ def forecast_prediction():
             paper_bgcolor='#FFFFFF',
             plot_bgcolor='#FFFFFF')
             
+        fig.update_xaxes(type='category')
         #fig.show()
         st.plotly_chart(fig,use_container_width=True)
 
@@ -287,12 +291,13 @@ def final_outcome():
     
     data = pd.concat([st.session_state.initial_data[['Year_Month','Profit']],st.session_state.final_outcome[['Year_Month','Predicted Outcome (AI)','Desired outcome(Manual)','Target Profit (AI + Manual)']]])        
     # fig = px.bar(data, x='Year_Month', y=['Profit','Forecasted Profit (AI)'])
-    
+
     x1 = data['Year_Month']
     y1 = data['Profit']
     y2 = data['Predicted Outcome (AI)']
     y3 = data['Desired outcome(Manual)']
-    y4 = data['Target Profit (AI + Manual)']
+    y4 = data['Target Profit (AI + Manual)'] 
+    
     fig = px.line(data, x=x1, y=[y1,y2,y3,y4])
     fig.update_layout(
             height=600,
@@ -302,6 +307,7 @@ def final_outcome():
             title = 'Prediction Trend',
             paper_bgcolor='#FFFFFF',
             plot_bgcolor='#FFFFFF')
+    # fig.update_yaxes(type='category',tickangle = 90)
     
     st.plotly_chart(fig,height=600,use_container_width=True)
     
